@@ -1,10 +1,11 @@
 /* ---------------------------------------------------------------------------
  * adConfig — the only file you should need to touch to cut a new variant.
  *
- * Everything the viewer reads or hears, and every beat it lands on, lives
- * here. Components read from this object and never hard-code copy or timing.
- * Times are in SECONDS (converted to frames with `f()`), so a script change
- * does not require frame arithmetic.
+ * The ad is built AROUND a real call recording. `call.turns` lists which
+ * spans of the recording are used (source seconds, untouched audio); the
+ * timeline below lays them end to end with a short, natural gap and every
+ * scene and headline is timed from that. Swap the recording and its turn
+ * list and the whole film re-times itself.
  * ------------------------------------------------------------------------- */
 
 export const FPS = 30;
@@ -17,127 +18,153 @@ export const f = (s: number) => Math.round(s * FPS);
 export type HeadlineLine = {
   text: string;
   accent?: boolean;
-  /** seconds after the scene starts that this line enters. Omit and the
-   *  line enters with the state, staggered a few frames after the one above. */
+  /** seconds after the headline's own start that this line enters. Omit
+   *  and lines enter together, staggered a few frames apart. */
   at?: number;
 };
 
 export type Headline = {
-  /** Explicit font size (px). Every line must fit HEADLINE_W at this size —
-   *  the render throws if one does not. Break long sentences into lines
-   *  here; nothing ever wraps automatically. */
+  /** scene this headline belongs to, and seconds after that scene starts */
+  scene: SceneKey;
+  offset?: number;
+  /** Explicit font size (px). Every line must fit the 936px container at
+   *  this size — the render throws if one does not. Nothing wraps. */
   size: number;
   lines: HeadlineLine[];
-  /** seconds after the scene starts that the headline exits. Omit and it
-   *  exits so that it is completely gone by the time the next scene starts. */
-  exitAt?: number;
+  /** omit on the last headline to hold it to the end */
 };
+
+export type Speaker = "ai" | "buyer";
+
+export type Turn = {
+  speaker: Speaker;
+  /** span of the source recording (s), with ~0.1s of room either side */
+  from: number;
+  to: number;
+  /** English meaning of the line, shown in the call's live transcript */
+  caption: string;
+  /** a field the AI is asking about, or the buyer is answering */
+  asks?: FieldKey;
+  answers?: FieldKey;
+  /** marks the buyer's first reply — the lead is engaged */
+  engages?: boolean;
+};
+
+export type FieldKey = "purpose" | "budget";
+
+/* ------------------------------------------------------------ the call -- */
+const call = {
+  src: "audio/sarvam-call.wav",
+  badge: "Real AI call",
+  /** timeline second the first used turn starts */
+  startAt: 0.85,
+  /** extra silence inserted between consecutive turns (s) */
+  gap: 0.08,
+  turns: [
+    { speaker: "ai", from: 5.14, to: 7.62, caption: "Are you still looking at properties?" },
+    { speaker: "buyer", from: 8.26, to: 8.95, caption: "Yes.", engages: true },
+    { speaker: "ai", from: 9.22, to: 12.92, caption: "Is it for living, or for investment?", asks: "purpose" },
+    { speaker: "buyer", from: 13.72, to: 14.36, caption: "Investment.", answers: "purpose" },
+    { speaker: "ai", from: 14.5, to: 16.36, caption: "What's your approximate budget?", asks: "budget" },
+    { speaker: "buyer", from: 16.56, to: 17.3, caption: "2 crore.", answers: "budget" },
+  ] as Turn[],
+};
+
+/** Each used turn placed on the ad's timeline (seconds). */
+export const dialogue = (() => {
+  let t = call.startAt;
+  return call.turns.map((turn, i) => {
+    const start = t;
+    const end = start + (turn.to - turn.from);
+    t = end + call.gap;
+    return { ...turn, index: i, start, end };
+  });
+})();
+
+const firstTurn = dialogue[0];
+const lastTurn = dialogue[dialogue.length - 1];
+const firstAsk = dialogue.find((d) => d.asks)!;
+
+const scenes = {
+  arrive: 0,
+  /** the call UI appears and rings just before the AI speaks */
+  call: firstTurn.start - 0.42,
+  qualify: firstAsk.start - 0.2,
+  handoff: lastTurn.end + 0.12,
+  close: lastTurn.end + 0.12 + 1.85,
+};
+export type SceneKey = keyof typeof scenes;
+
+/** The full enquiry card stays up while the call rings and connects under
+ *  it, then collapses to a row as the second headline arrives. */
+const LEAD_COLLAPSE_OFFSET = 1.45;
+export const leadCollapseAt = scenes.call + LEAD_COLLAPSE_OFFSET;
 
 export const adConfig = {
   id: "BetterCallzAd",
-  durationSec: 15.5,
+  durationSec: 16,
 
-  /* ------------------------------------------------------------ scenes -- */
-  /** Scene start times (s). Each scene runs until the next one starts.
-   *  The outgoing headline finishes leaving exactly as its scene ends; the
-   *  incoming one enters after a short breathing gap. */
-  scenes: {
-    arrive: 0,
-    waiting: 2.1,
-    calling: 3.8,
-    qualify: 6.7,
-    handoff: 9.2,
-    close: 11.0,
-  },
+  scenes,
 
   /* --------------------------------------------------------- headlines -- */
-  /** `accent` lines render in brand teal. A trailing "." on a white line
-   *  gets the brand's teal full stop. */
-  headlines: {
-    arrive: { size: 112, lines: [{ text: "YOUR META LEAD" }, { text: "JUST CAME IN." }] },
-    waiting: { size: 112, lines: [{ text: "WHO'S" }, { text: "CALLING IT?", accent: true }] },
-    calling: { size: 80, lines: [{ text: "BETTERCALLZ" }, { text: "CALLS AUTOMATICALLY.", accent: true }] },
-    qualify: { size: 112, lines: [{ text: "AI QUALIFIES" }, { text: "THE BUYER." }] },
-    handoff: { size: 98, lines: [{ text: "YOUR SALES TEAM" }, { text: "GETS THE CONTEXT.", accent: true }] },
-    // The payoff owns the whole frame, so it is set larger, in four
-    // intentional lines, and lands in two beats.
-    close: {
-      size: 124,
-      lines: [
-        { text: "YOU PAID", at: 0.15 },
-        { text: "FOR THE LEAD.", at: 0.25 },
-        { text: "DON'T LET IT", accent: true, at: 1.15 },
-        { text: "GO COLD.", accent: true, at: 1.25 },
-      ],
-      exitAt: 2.2,
+  /** In order. Each one exits completely (plus a gap) before the next
+   *  enters — enforced by config/headlineSchedule.ts. */
+  headlines: [
+    { scene: "arrive", size: 88, lines: [{ text: "A NEW PROPERTY" }, { text: "ENQUIRY JUST" }, { text: "CAME IN." }] },
+    { scene: "call", offset: LEAD_COLLAPSE_OFFSET, size: 108, lines: [{ text: "BETTERCALLZ" }, { text: "CALLS THE LEAD.", accent: true }] },
+    { scene: "qualify", size: 108, lines: [{ text: "AI QUALIFIES" }, { text: "THE BUYER." }] },
+    {
+      scene: "handoff",
+      size: 88,
+      lines: [{ text: "YOUR SALESPERSON" }, { text: "KNOWS WHAT THE" }, { text: "BUYER WANTS.", accent: true }],
     },
-  } satisfies Record<string, Headline>,
+    {
+      scene: "close",
+      size: 104,
+      lines: [
+        { text: "YOU PAID FOR", at: 0.15 },
+        { text: "THE LEAD.", at: 0.25 },
+        { text: "DON'T LET IT", accent: true, at: 0.6 },
+        { text: "GO COLD.", accent: true, at: 0.7 },
+      ],
+    },
+  ] satisfies Headline[],
 
   /* -------------------------------------------------------------- lead -- */
-  /** The enquiry the whole story follows. Illustrative buyer, not a customer. */
+  /** The enquiry. Illustrative buyer — no budget or preference here: the
+   *  call is what finds those out. */
   lead: {
     sourceLabel: "NEW PROPERTY ENQUIRY",
     source: "Meta lead form",
     name: "Aarav Mehta",
     initials: "AM",
     phone: "+91 98XXX XX421",
-    chips: ["3 BHK", "₹2–2.5 Cr", "Noida"],
-    status: "Interested",
+    received: "Just received",
   },
 
-  /** Scene 2: how long the lead has sat uncalled. The clock runs fast to
-   *  show time passing — minutes, not seconds. */
-  waiting: {
-    label: "NOT CALLED YET",
-    toMinutes: 47,
-  },
+  call,
 
-  /* -------------------------------------------------------------- call -- */
-  call: {
-    badge: "Real AI call",
-    calling: "Calling Aarav…",
-    connected: "Connected",
-    /** Voice file (in /public) and where it starts on the timeline. The
-     *  speech inside the file begins ~0.62s in. */
-    voiceSrc: "audio/property-voice.wav",
-    voiceAt: 4.02,
-    /** Subtitles, timed against the TIMELINE (s). Hindi as spoken, with an
-     *  English line under it for viewers who don't speak Hindi. */
-    subtitles: [
-      { from: 4.6, to: 6.6, hi: "नमस्ते, मैं BetterCallz से बोल रहा हूँ।", en: "Hi, I'm calling from BetterCallz." },
-      { from: 7.05, to: 8.55, hi: "क्या अभी कोई प्रॉपर्टी देख रहे हैं?", en: "Are you looking at a property right now?" },
-    ],
-  },
-
-  /* --------------------------------------------------------- qualify -- */
-  /** Resolved one after another, as if heard in the conversation. `at` is
-   *  seconds after the qualify scene starts. */
-  qualification: [
-    { label: "BUDGET", value: "₹2–2.5 Cr", at: 0.5 },
-    { label: "REQUIREMENT", value: "3 BHK", at: 0.92 },
-    { label: "TIMELINE", value: "1–2 months", at: 1.34 },
-    { label: "INTENT", value: "High", at: 1.76, highlight: true },
-  ],
+  /* ---------------------------------------------------------- capture -- */
+  /** What the call captures. Values are exactly what the buyer said. */
+  fields: {
+    purpose: { label: "PURPOSE", value: "Investment" },
+    budget: { label: "BUDGET", value: "₹2 Crore" },
+  } satisfies Record<FieldKey, { label: string; value: string }>,
 
   /* ----------------------------------------------------------- handoff -- */
   handoff: {
-    steps: ["AI CALL", "QUALIFIED LEAD", "SALES TEAM"],
     briefTitle: "SALES BRIEF",
     badge: "Qualified",
-    nextStepLabel: "Next step",
-    nextStep: "Site visit",
-    assigned: "Assigned to your sales team",
+    assigned: "Handed to your sales team",
+    status: "Still looking",
   },
 
   /* ------------------------------------------------------------- close -- */
   cta: {
     label: "GET A LIVE AI CALL",
     url: "demo.bettercallz.com",
-    /* Enters after the payoff headline has completely left — computed in
-     * config/headlineSchedule.ts, not set here. */
   },
 
-  /* ------------------------------------------------------------- brand -- */
   brand: {
     wordmark: "bettercallz",
   },
@@ -167,27 +194,21 @@ export const adConfig = {
   },
 
   /* ------------------------------------------------------------- sound -- */
-  /** Cue sheet (timeline seconds). Voice is always dominant; everything
-   *  here sits well under it. */
+  /** The call recording is the only voice and always dominant. Cues are
+   *  soft and sit on visual events; the bed ducks under the whole call. */
   sound: {
     bedVolume: 0.1,
-    /** bed ducks to this while the AI voice is speaking */
-    bedDuck: 0.045,
+    bedDuck: 0.035,
+    voiceVolume: 1,
     cues: [
-      { at: 0.05, src: "sfx/notify.wav", volume: 0.42 },
-      { at: 2.05, src: "sfx/air.wav", volume: 0.22 },
-      { at: 3.78, src: "sfx/ring.wav", volume: 0.16 },
-      { at: 4.38, src: "sfx/connect.wav", volume: 0.14 },
-      { at: 6.65, src: "sfx/air.wav", volume: 0.16 },
-      { at: 9.15, src: "sfx/air.wav", volume: 0.18 },
-      { at: 9.55, src: "sfx/confirm.wav", volume: 0.22 },
-      { at: 10.95, src: "sfx/air.wav", volume: 0.22 },
-      { at: 13.6, src: "sfx/notify.wav", volume: 0.3 },
+      { at: 0.05, src: "sfx/notify.wav", volume: 0.4 },
+      { at: scenes.call - 0.02, src: "sfx/ring.wav", volume: 0.14 },
+      { at: scenes.handoff + 0.1, src: "sfx/confirm.wav", volume: 0.2 },
     ],
-    /** ticks for the uncalled clock in scene 2 */
-    tickVolume: 0.1,
-    /** plucks as each qualification field resolves */
-    resolveVolume: 0.2,
+    /** a soft pluck as each field is captured */
+    resolveVolume: 0.18,
+    /** the end card's chime, relative to when the CTA lands */
+    ctaChime: { src: "sfx/notify.wav", volume: 0.26 },
   },
 } as const;
 

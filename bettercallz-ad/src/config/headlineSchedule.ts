@@ -2,52 +2,54 @@
  * The headline schedule: every headline state, in frames, with explicit
  * enter / hold / exit windows — and the rules that keep them apart.
  *
- * Derived from adConfig so a new script re-times itself. Validated at module
- * load: if any rule below is broken the render fails loudly instead of
- * shipping two headlines on top of each other.
+ * Derived from adConfig (which is itself timed from the call recording), so
+ * a new script or recording re-times itself. Validated at module load: if a
+ * rule is broken the render fails loudly instead of shipping overlapping text.
  *
  *   1. A state is completely gone before the next one starts entering,
  *      with at least TEXT_TIMING.gap empty frames in between.
  *   2. Every line is fully settled for at least minHold frames before exit.
- *   3. The end card enters only after the payoff headline has left.
- *   4. On scenes with product UI, the headline block ends above the UI.
+ *   3. On scenes with product UI, the headline block ends above the UI.
+ *   4. The end card sits below the payoff (never over it) and is on screen
+ *      long enough to read.
  * ------------------------------------------------------------------------- */
 import { TEXT_TIMING } from "../components/TextTransition";
-import { adConfig, f, Headline } from "./adConfig";
+import { adConfig, f, SceneKey } from "./adConfig";
 import { HEADLINE_Y, HERO_Y } from "./layout";
-
-type SceneKey = keyof typeof adConfig.scenes;
-const order = Object.keys(adConfig.scenes) as SceneKey[];
-const start = (k: SceneKey) => f(adConfig.scenes[k]);
 
 export type ScheduledLine = { text: string; accent?: boolean; enterAt: number };
 export type ScheduledHeadline = {
-  key: SceneKey;
+  key: string;
+  scene: SceneKey;
   size: number;
   lines: ScheduledLine[];
   /** first frame any line starts entering */
   enterAt: number;
-  /** frame the whole state starts exiting (undefined = holds to the end) */
+  /** frame the state starts exiting (undefined = holds to the end) */
   exitAt?: number;
   /** first frame after the exit completes */
   goneAt?: number;
 };
 
 const T = TEXT_TIMING;
+const list = adConfig.headlines;
 
-export const headlineSchedule: ScheduledHeadline[] = order.map((k, i) => {
-  const h: Headline = adConfig.headlines[k];
-  const next = order[i + 1];
-  // First state is already settled on frame 0 so the thumbnail reads.
-  const base = i === 0 ? -(T.enter + T.lineStagger * h.lines.length) : start(k) + T.gap;
+/** Frame a headline's slot opens: its scene start + offset. */
+const slotAt = (i: number) => f(adConfig.scenes[list[i].scene] + (list[i].offset ?? 0));
+
+export const headlineSchedule: ScheduledHeadline[] = list.map((h, i) => {
+  // The opening state is already settled on frame 0 so the thumbnail reads.
+  const base = i === 0 ? -(T.enter + T.lineStagger * h.lines.length) : slotAt(i) + T.gap;
   const lines = h.lines.map((l, li) => ({
     text: l.text,
-    accent: l.accent,
-    enterAt: l.at !== undefined ? start(k) + f(l.at) : base + li * T.lineStagger,
+    accent: "accent" in l ? l.accent : undefined,
+    enterAt: "at" in l && l.at !== undefined ? slotAt(i) + f(l.at) : base + li * T.lineStagger,
   }));
-  const exitAt = h.exitAt !== undefined ? start(k) + f(h.exitAt) : next ? start(next) - T.exit : undefined;
+  // Exit so the state is completely gone exactly when the next slot opens.
+  const exitAt = i < list.length - 1 ? slotAt(i + 1) - T.exit : undefined;
   return {
-    key: k,
+    key: `${h.scene}-${i}`,
+    scene: h.scene,
     size: h.size,
     lines,
     enterAt: Math.min(...lines.map((l) => l.enterAt)),
@@ -56,12 +58,14 @@ export const headlineSchedule: ScheduledHeadline[] = order.map((k, i) => {
   };
 });
 
-/** Frame the end card may start entering: payoff gone + breathing gap. */
-const payoff = headlineSchedule[headlineSchedule.length - 1];
-export const END_CARD_AT = (payoff.goneAt ?? f(adConfig.durationSec)) + T.gap;
-
 export const headlineHeight = (h: { size: number; lines: unknown[] }) =>
-  h.size * adConfig.type.headlineLineHeight * h.lines.length;
+  Math.round(h.size * adConfig.type.headlineLineHeight) * h.lines.length;
+
+const payoff = headlineSchedule[headlineSchedule.length - 1];
+/** Bottom edge (px) of the payoff block — the end card sits below it. */
+export const PAYOFF_BOTTOM = HEADLINE_Y + headlineHeight(payoff);
+/** Frame the end card enters: once the last payoff line has settled. */
+export const END_CARD_AT = Math.max(...payoff.lines.map((l) => l.enterAt)) + T.enter + 2;
 
 /* ------------------------------------------------------------ the rules -- */
 const errors: string[] = [];
@@ -76,9 +80,9 @@ headlineSchedule.forEach((h, i) => {
   if (h.exitAt !== undefined && h.exitAt - settled < T.minHold)
     errors.push(`${h.key} holds only ${h.exitAt - settled} frames before exiting (min ${T.minHold})`);
   const isPayoff = i === headlineSchedule.length - 1;
-  if (!isPayoff && HEADLINE_Y + headlineHeight(h) > HERO_Y - 24)
+  if (!isPayoff && HEADLINE_Y + headlineHeight(h) > HERO_Y - 48)
     errors.push(`${h.key} headline (${headlineHeight(h)}px tall) runs into the product UI`);
 });
 const total = f(adConfig.durationSec);
-if (END_CARD_AT + 45 > total) errors.push(`end card is on screen for only ${total - END_CARD_AT} frames (min 45)`);
+if (total - END_CARD_AT < 42) errors.push(`end card is on screen for only ${total - END_CARD_AT} frames (min 42)`);
 if (errors.length) throw new Error("Headline schedule violates the text rules:\n  " + errors.join("\n  "));

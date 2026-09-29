@@ -1,11 +1,18 @@
-# BetterCallz — 15.5s Meta/Instagram Reel
+# BetterCallz — 16s Meta/Instagram Reel (real call recording)
 
 A Remotion (React + TypeScript) project that renders a 1080×1920, 30fps, H.264/AAC
 performance ad for BetterCallz. The finished render is at **`out/BetterCallzAd.mp4`**.
 
 ```
-LEAD ARRIVES → NOBODY CALLS → BETTERCALLZ CALLS → AI QUALIFIES → SALES TEAM GETS CONTEXT → TRY IT
+ENQUIRY ARRIVES → BETTERCALLZ CALLS (real Sarvam recording) → WHAT THE BUYER SAYS IS CAPTURED
+→ SALES BRIEF → YOU PAID FOR THE LEAD. DON'T LET IT GO COLD. → GET A LIVE AI CALL →
 ```
+
+The film is built **around the recording**. `public/audio/sarvam-call.wav` is the real call.
+`adConfig.call.turns` lists which spans of it are used, and every span plays untouched. The
+only edit is shorter silences between turns (about 0.26s of natural pause is kept). Every scene,
+headline, caption and captured field is timed from those turns, so a new recording and its turn
+list re-time the whole ad.
 
 ## Commands
 
@@ -32,16 +39,16 @@ src/
   components/
     AnimatedText.tsx        headline: words rise out of per-word masks, auto-fit to width
     LeadCard.tsx            the enquiry: lands like a notification, collapses to a row when called
-    CallInterface.tsx       the empty "not called yet" slot → morphs into the live AI call → call bar
-    Waveform.tsx            level meter driven by the REAL call audio (RMS of the voice file)
-    QualificationCard.tsx   fields appear when asked, resolve when answered
+    CallInterface.tsx       the live call: rings, connects, speaker meter, one-line live transcript
+    Waveform.tsx            level meter read from the real recording through the same edit (AI teal, buyer white)
+    CapturePanel.tsx        a field appears when the AI asks and its value lands as the buyer answers
     SalesBrief.tsx          AI CALL → QUALIFIED LEAD → SALES TEAM chain + brief with next step
     FinalCTA.tsx            wordmark, one button, one URL
-    Subtitles.tsx           Hindi as spoken + English beneath
     SoundTrack.tsx          voice, ducked bed, cues
     SceneTransition.tsx     scene start/end helpers
   motion.ts                 easing/spring vocabulary (adapted from agentic-product-demo, MIT)
-public/audio/property-voice.wav   the supplied AI call opening
+public/audio/sarvam-call.wav      the real call recording (Sarvam)
+public/audio/property-voice.wav   the earlier AI opening line (not used in this cut)
 public/sfx/*.wav                  synthesised, restrained UI sounds + low music bed
 scripts/                          render / stills / sfx
 reference/solar-reel.mp4          the reference ad (studied, not copied)
@@ -53,26 +60,40 @@ Everything a viewer reads or hears is in `src/config/adConfig.ts`, and all times
 
 - **New hook or script:** edit `headlines`. Give each state an explicit `size` and its lines. `accent: true` sets a line in teal, and
   `at` sets per-line timing (as in the payoff). If a line does not fit, or the timing breaks a rule, the render fails with a message.
-- **Different timing:** change `scenes` (start seconds). The components place their beats relative to these starts.
-- **Different buyer or market:** change `lead`, `qualification`, and `handoff`. The qualification list can have any length.
-- **Different voice:** drop a file in `public/audio/`, then set `call.voiceSrc`, `call.voiceAt`, and the `subtitles` times.
-  The waveform follows the new file automatically.
+- **Different buyer or market:** change `lead`, `fields`, and `handoff`.
+- **Different recording:** drop a file in `public/audio/`, then set `call.src` and list the spans you want in `call.turns`,
+  each with speaker, source from/to, caption, and optionally `asks` / `answers` a field or `engages`.
+  The scenes, headlines, transcript, captured fields, meter and audio edit all follow.
 - **Sound:** move or re-level `sound.cues`. Swapping a `.wav` in `public/sfx` keeps the timing.
 - Register a second `<Composition>` in `src/Root.tsx` if you want both variants side by side.
 
-## Final on-screen copy (15.5s)
+## Final on-screen copy (16.0s)
 
-| Time | Headline | Supporting UI |
+| Time | Headline | Product UI |
 |---|---|---|
-| 0.0–2.1 | YOUR META LEAD / JUST CAME IN. | NEW PROPERTY ENQUIRY · via Meta lead form · Aarav Mehta · 3 BHK · ₹2–2.5 Cr · Noida · Just received · Interested |
-| 2.1–3.8 | WHO'S / CALLING IT? | Not called yet · NOT CALLED YET · 0→47 min waiting · Lead is going cold. |
-| 3.8–6.7 | BETTERCALLZ / CALLS AUTOMATICALLY. | AI calling · Real AI call · Calling Aarav… → Connected · AI speaking · live waveform |
-| 6.7–9.2 | AI QUALIFIES / THE BUYER. | BUYER QUALIFICATION · BUDGET ₹2–2.5 Cr · REQUIREMENT 3 BHK · TIMELINE 1–2 months · INTENT High |
-| 9.2–11.0 | YOUR SALES TEAM / GETS THE CONTEXT. | AI CALL → QUALIFIED LEAD → SALES TEAM · SALES BRIEF · Next step: Site visit |
-| 11.15–12.25 | YOU PAID / FOR THE LEAD. | the payoff line enters by itself, full frame |
-| 12.25–13.3 | + DON'T LET IT / GO COLD. | the second line lands under the first one |
-| 13.3–13.7 | exits completely, then a gap | |
-| 13.7–15.5 | bettercallz. · **GET A LIVE AI CALL →** · demo.bettercallz.com | end card, fully readable for about 1.75s |
+| 0.0–1.9 | A NEW PROPERTY / ENQUIRY JUST / CAME IN. | NEW PROPERTY ENQUIRY · Aarav Mehta · Just received → "BetterCallz is calling…" · call card rings in underneath |
+| 2.0–4.0 | BETTERCALLZ / CALLS THE LEAD. | Lead collapses to a row (Calling → **Engaged** when the buyer replies) · Real AI call · live meter · transcript |
+| 4.1–11.5 | AI QUALIFIES / THE BUYER. | Transcript follows each turn · CAPTURED FROM THE CALL: PURPOSE → **Investment**, BUDGET → **₹2 Crore** |
+| 11.6–13.3 | YOUR SALESPERSON / KNOWS WHAT THE / BUYER WANTS. | SALES BRIEF · Qualified · Aarav Mehta · Still looking · PURPOSE Investment · BUDGET ₹2 Crore · Handed to your sales team |
+| 13.5–16.0 | YOU PAID FOR / THE LEAD. / DON'T LET IT / GO COLD. | then, below it: bettercallz. · **GET A LIVE AI CALL →** · demo.bettercallz.com (on screen from 14.5s) |
+
+## The conversation (used spans of the recording)
+
+| Ad time | Source | Speaker | Transcript caption (English meaning) |
+|---|---|---|---|
+| 0.85–3.33 | 5.14–7.62 | AI | "क्या आप अभी भी प्रॉपर्टी देख रहे हैं?": *Are you still looking at properties?* |
+| 3.41–4.10 | 8.26–8.95 | Buyer | *Yes.* |
+| 4.18–7.88 | 9.22–12.92 | AI | *Is it for living, or for investment?* |
+| 7.96–8.60 | 13.72–14.36 | Buyer | *Investment.* |
+| 8.68–10.54 | 14.50–16.36 | AI | *What's your approximate budget?* |
+| 10.62–11.36 | 16.56–17.30 | Buyer | *2 crore.* |
+
+Not used, to fit 16s: the greeting (0.8–4.8s, "Namaste, I'm calling from BetterCallz…" plus the
+enquiry reference) and the closing (18.6–24.7s: the AI saying it will share the details with the
+sales team, who will contact the buyer soon). To include either, add its span to `call.turns`.
+
+Captions are English meanings. They are not verbatim Hindi, because the transcription was done with a small
+offline model. Confirm the wording before publishing.
 
 ## Text transition system
 
@@ -91,22 +112,14 @@ Nothing is masked, so no glyph can be clipped mid-animation. UI text that swaps 
 same rule (for example "Just received" → "Not called yet", "Listening…" → the answer, "Calling…" →
 "Connected"): `swap()` takes the old text out, waits a short gap, then brings the new text in.
 
-## Voice / audio script
+## Sound
 
-The only voice is the supplied recording of BetterCallz's AI opening a property call.
-It plays from 4.02s, and the speech runs about 4.6–8.4s:
+The recording is the only voice. Under it:
+- a soft notification when the enquiry lands
+- one short ringback as the call starts
+- a muted pluck as each field is captured
+- a warm confirm at the handoff
+- a chime on the end card
+- a low bed that ducks under the whole call
 
-1. *"नमस्ते, मैं BetterCallz से बोल रहा हूँ।"*: "Hi, I'm calling from BetterCallz."
-2. *"क्या अभी कोई प्रॉपर्टी देख रहे हैं?"*: "Are you looking at a property right now?"
-
-Sound cues:
-- 0.05s: soft notification (lead arrives)
-- 2.3–3.5s: clock ticks, one per minute change
-- 3.78s: one Indian-style ringback burst
-- 4.38s: connect blip
-- One muted pluck per qualified field
-- 9.55s: warm "confirm" at the handoff
-- 13.6s: soft chime on the end card
-
-Under all of this is a low music bed that ducks about 7 dB while the AI speaks.
-The master is loudness-normalised with a −1.5 dBTP ceiling.
+The master is loudness-normalised to about −14 LUFS with a −1.5 dBTP ceiling.

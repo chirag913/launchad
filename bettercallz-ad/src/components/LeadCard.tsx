@@ -1,56 +1,50 @@
 import React from "react";
 import { useCurrentFrame } from "remotion";
-import { adConfig } from "../config/adConfig";
+import { adConfig, dialogue, f, leadCollapseAt } from "../config/adConfig";
 import { CONTENT_W, GUTTER, HERO_Y, LEAD_COMPACT_H, LEAD_FULL_H } from "../config/layout";
-import { DUR, EASE, mix, mixToken, pop, ramp } from "../motion";
+import { DUR, EASE, mix, pop, ramp } from "../motion";
 import { Inbox } from "./Icons";
 import { sceneStart } from "./SceneTransition";
 import { swap } from "./TextTransition";
-import { Avatar, cardStyle, Chip, Dot, Label } from "./ui";
+import { Avatar, cardStyle, Dot, Label } from "./ui";
 
 const C = adConfig.colors;
 const L = adConfig.lead;
 
-/** Frame the card lands (a hair after frame 0 so the first frame already
- *  carries the headline and the notification is visibly *arriving*). */
+/** Frame the card lands — just before frame 0, so the first frame already
+ *  shows the enquiry arriving rather than an empty stage. */
 export const LEAD_IN = -3;
 
+/** Frame the buyer first replies — the lead is now engaged. */
+const ENGAGED_AT = f((dialogue.find((d) => d.engages) ?? dialogue[1]).start + 0.1);
+
 /**
- * The property enquiry. Arrives like a notification, sits there uncalled,
- * then collapses into a compact row once BetterCallz picks it up — the lead
- * stays on screen the whole story, so the viewer never loses the thread.
+ * The property enquiry. Lands like a notification, then collapses into a
+ * compact row once BetterCallz starts calling, and stays on screen through
+ * the call so the viewer never loses whose lead this is.
  */
 export const LeadCard: React.FC = () => {
   const frame = useCurrentFrame();
-  const waitAt = sceneStart("waiting");
-  const callAt = sceneStart("calling");
-  const qualAt = sceneStart("qualify");
+  const callAt = sceneStart("call");
   const handoffAt = sceneStart("handoff");
 
-  // Arrival: a spring drop with a little scale, landing once.
   const land = pop(frame, LEAD_IN, { damping: 16, stiffness: 140 }, DUR.hero + 4);
   const arriveOpacity = ramp(frame, LEAD_IN, 8);
 
-  // Collapse into the compact row when the call starts.
-  const compact = ramp(frame, callAt, 16, EASE.inOut);
+  const collapseAt = f(leadCollapseAt);
+  const compact = ramp(frame, collapseAt, 16, EASE.inOut);
+  // "Just received" → "AI calling now" the moment the call starts
+  const calling = swap(frame, callAt);
   const h = mix(compact, LEAD_FULL_H, LEAD_COMPACT_H);
 
-  // Handoff: the lead folds into the sales brief.
   const out = ramp(frame, handoffAt - 4, 7, EASE.out);
   if (out >= 1) return null;
 
-  // Waiting: accent cools from teal to amber.
-  const cool = ramp(frame, waitAt + 4, 14, EASE.inOut);
-  const status = swap(frame, waitAt + 4);
-  const statusColor = mixToken(cool, C.accentBright, C.warn);
-  const pulse = cool < 1 ? 0.5 + 0.5 * Math.sin(frame / 4.2) : 0;
-
-  // full content leaves completely before the compact row arrives
-  const fullOpacity = 1 - ramp(frame, callAt - 5, 4, EASE.out);
-  const compactOpacity = ramp(frame, callAt + 1, 9, EASE.out);
-
-  // Compact status: "AI calling" during the call, "Qualifying" after.
-  const qual = swap(frame, qualAt);
+  // The full layout leaves completely before the compact row arrives.
+  const fullOpacity = 1 - ramp(frame, collapseAt - 2, 4, EASE.out);
+  const compactOpacity = ramp(frame, collapseAt + 2, 9, EASE.out);
+  const status = swap(frame, ENGAGED_AT - 7);
+  const pulse = 0.5 + 0.5 * Math.sin(frame / 4.2);
 
   return (
     <div
@@ -64,7 +58,6 @@ export const LeadCard: React.FC = () => {
         transformOrigin: "50% 0%",
       })}
     >
-      {/* Top-edge accent — the "new" signal, cools while nobody calls. */}
       <div
         style={{
           position: "absolute",
@@ -72,7 +65,7 @@ export const LeadCard: React.FC = () => {
           right: 0,
           top: 0,
           height: 2,
-          background: `linear-gradient(90deg, rgba(0,0,0,0), ${statusColor}, rgba(0,0,0,0))`,
+          background: `linear-gradient(90deg, rgba(0,0,0,0), ${C.accentBright}, rgba(0,0,0,0))`,
           opacity: 0.8 * (1 - compact),
         }}
       />
@@ -95,10 +88,6 @@ export const LeadCard: React.FC = () => {
             <Inbox size={32} color={C.accentBright} />
           </div>
           <Label>{L.sourceLabel}</Label>
-          <div style={{ flex: 1 }} />
-          <div style={{ fontFamily: adConfig.type.ui, fontSize: 27, fontWeight: 500, color: C.textDim, whiteSpace: "nowrap" }}>
-            via {L.source}
-          </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 28, marginTop: 40 }}>
@@ -113,53 +102,41 @@ export const LeadCard: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 14, marginTop: 36 }}>
-          {L.chips.map((c, i) => {
-            const t = ramp(frame, LEAD_IN + 8 + i * 3, DUR.panel);
-            return (
-              <Chip key={c} style={{ opacity: t, transform: `translateY(${mix(t, 10, 0).toFixed(2)}px)` }}>
-                {c}
-              </Chip>
-            );
-          })}
-        </div>
+        <div style={{ height: 1, background: C.border, marginTop: 40 }} />
 
-        <div style={{ height: 1, background: C.border, marginTop: 36 }} />
-
-        <div style={{ display: "flex", alignItems: "center", marginTop: 28, gap: 14, position: "relative", height: 36 }}>
+        <div style={{ display: "flex", alignItems: "center", marginTop: 30, gap: 14, height: 36 }}>
           <div style={{ position: "relative", width: 14, height: 14 }}>
             <div
               style={{
                 position: "absolute",
                 inset: -9,
                 borderRadius: 40,
-                background: statusColor,
+                background: C.accentBright,
                 opacity: 0.22 * pulse,
                 transform: `scale(${0.6 + 0.6 * pulse})`,
               }}
             />
-            <Dot color={statusColor} size={14} />
+            <Dot color={C.accentBright} size={14} />
           </div>
-          {/* Status text crossfades: Just received → Not called yet */}
-          <div style={{ position: "relative", flex: 1, height: 36 }}>
-            <StatusText text="Just received" color={C.text} opacity={1 - status.out} y={-status.out * 10} />
-            <StatusText text="Not called yet" color={C.warn} opacity={status.in} y={(1 - status.in) * 10} />
+          <div style={{ display: "grid", flex: 1 }}>
+            <div style={{ gridArea: "1 / 1", fontFamily: adConfig.type.ui, fontWeight: 500, fontSize: 33, color: C.text, opacity: 1 - calling.out }}>
+              {L.received}
+            </div>
+            <div
+              style={{
+                gridArea: "1 / 1",
+                fontFamily: adConfig.type.ui,
+                fontWeight: 600,
+                fontSize: 33,
+                color: C.accentBright,
+                opacity: calling.in,
+                transform: `translateY(${mix(calling.in, 8, 0).toFixed(2)}px)`,
+              }}
+            >
+              BetterCallz is calling…
+            </div>
           </div>
-          <div
-            style={{
-              fontFamily: adConfig.type.ui,
-              fontWeight: 600,
-              fontSize: 27,
-              color: C.accentBright,
-              padding: "10px 20px",
-              borderRadius: 999,
-              background: "rgba(63,216,177,0.10)",
-              border: "1px solid rgba(63,216,177,0.25)",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {L.status}
-          </div>
+          <div style={{ fontFamily: adConfig.type.ui, fontWeight: 500, fontSize: 28, color: C.textDim, whiteSpace: "nowrap" }}>via {L.source}</div>
         </div>
       </div>
 
@@ -167,7 +144,10 @@ export const LeadCard: React.FC = () => {
       <div
         style={{
           position: "absolute",
-          inset: 0,
+          left: 0,
+          right: 0,
+          top: 0,
+          height: LEAD_COMPACT_H,
           padding: "0 32px",
           display: "flex",
           alignItems: "center",
@@ -182,54 +162,51 @@ export const LeadCard: React.FC = () => {
             {L.name}
           </div>
           <div style={{ fontFamily: adConfig.type.ui, fontWeight: 500, fontSize: 27, color: C.textDim, marginTop: 6, whiteSpace: "nowrap" }}>
-            {L.chips.join("  ·  ")}
+            Property enquiry · {L.source}
           </div>
         </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            fontFamily: adConfig.type.ui,
-            fontWeight: 600,
-            fontSize: 26,
-            color: C.accentBright,
-            padding: "10px 18px",
-            borderRadius: 999,
-            background: "rgba(63,216,177,0.10)",
-            border: "1px solid rgba(63,216,177,0.25)",
-            whiteSpace: "nowrap",
-            position: "relative",
-          }}
-        >
-          <Dot color={C.accentBright} size={10} glow={8} />
-          <div style={{ display: "grid" }}>
-            <span style={{ gridArea: "1 / 1", opacity: 1 - qual.out }}>AI calling</span>
-            <span style={{ gridArea: "1 / 1", opacity: qual.in }}>Qualifying</span>
-          </div>
-        </div>
+        <StatusPill status={status} />
       </div>
     </div>
   );
 };
 
-const StatusText: React.FC<{ text: string; color: string; opacity: number; y: number }> = ({ text, color, opacity, y }) => (
-  <div
-    style={{
-      position: "absolute",
-      left: 0,
-      top: 0,
-      fontFamily: adConfig.type.ui,
-      fontWeight: 500,
-      fontSize: 33,
-      color,
-      opacity,
-      transform: `translateY(${y.toFixed(2)}px)`,
-      lineHeight: "36px",
-      whiteSpace: "nowrap",
-    }}
-  >
-    {text}
-  </div>
-);
-
+/** "Calling" → "Engaged": the old label leaves before the new one lands. */
+const StatusPill: React.FC<{ status: { out: number; in: number } }> = ({ status }) => {
+  const engaged = status.in;
+  return (
+    <div
+      style={{
+        display: "grid",
+        alignItems: "center",
+        fontFamily: adConfig.type.ui,
+        fontWeight: 600,
+        fontSize: 26,
+        padding: "11px 20px",
+        borderRadius: 999,
+        whiteSpace: "nowrap",
+        background: engaged > 0 ? `rgba(63,216,177,${(0.1 + 0.9 * engaged).toFixed(3)})` : "rgba(63,216,177,0.10)",
+        border: "1px solid rgba(63,216,177,0.30)",
+      }}
+    >
+      <div style={{ gridArea: "1 / 1", display: "flex", alignItems: "center", gap: 10, color: C.accentBright, opacity: 1 - status.out }}>
+        <Dot color={C.accentBright} size={10} glow={8} />
+        Calling
+      </div>
+      <div
+        style={{
+          gridArea: "1 / 1",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          color: C.accentInk,
+          opacity: engaged,
+          transform: `translateY(${mix(engaged, 6, 0).toFixed(2)}px)`,
+        }}
+      >
+        <Dot color={C.accentInk} size={10} />
+        Engaged
+      </div>
+    </div>
+  );
+};

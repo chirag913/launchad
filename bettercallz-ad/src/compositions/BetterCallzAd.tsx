@@ -10,15 +10,14 @@ import { Background } from "../components/Background";
 import { CallInterface } from "../components/CallInterface";
 import { FinalCTA } from "../components/FinalCTA";
 import { LeadCard } from "../components/LeadCard";
-import { QualificationCard } from "../components/QualificationCard";
+import { CapturePanel } from "../components/CapturePanel";
 import { SalesBrief } from "../components/SalesBrief";
 import { SoundTrack } from "../components/SoundTrack";
-import { Subtitles } from "../components/Subtitles";
 import { Wordmark } from "../components/Wordmark";
 
 /**
- * LEAD ARRIVES → NOBODY CALLS → BETTERCALLZ CALLS → AI QUALIFIES →
- * SALES TEAM GETS CONTEXT → TRY IT YOURSELF.
+ * ENQUIRY ARRIVES → BETTERCALLZ CALLS (the real recording) → WHAT THE
+ * BUYER SAYS IS CAPTURED → SALES BRIEF → TRY IT YOURSELF.
  *
  * One continuous stage rather than six slides: the lead card, the call and
  * the brief are the same objects changing state, so the animation itself
@@ -52,9 +51,8 @@ export const BetterCallzAd: React.FC = () => {
 
           <LeadCard />
           <CallInterface />
-          <QualificationCard />
+          <CapturePanel />
           <SalesBrief />
-          <Subtitles />
           <FinalCTA />
         </>
       )}

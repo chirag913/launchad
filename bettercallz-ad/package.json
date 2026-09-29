@@ -1,0 +1,27 @@
+{
+  "name": "bettercallz-ad",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio",
+    "sfx": "bash scripts/make-sfx.sh",
+    "stills": "bash scripts/stills.sh",
+    "render": "bash scripts/render.sh"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/inter-tight": "^5.3.0",
+    "@fontsource/noto-sans-devanagari": "^5.3.0",
+    "@remotion/cli": "^4.0.530",
+    "@remotion/layout-utils": "^4.0.530",
+    "@remotion/media-utils": "^4.0.530",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "remotion": "^4.0.530"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "typescript": "^7.0.2"
+  }
+}

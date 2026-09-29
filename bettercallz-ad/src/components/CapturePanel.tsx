@@ -5,6 +5,7 @@ import { CAPTURE_Y, CONTENT_W, GUTTER } from "../config/layout";
 import { DUR, EASE, mix, pop, ramp } from "../motion";
 import { Check } from "./Icons";
 import { sceneStart } from "./SceneTransition";
+import { stackOffset } from "./stack";
 import { swap } from "./TextTransition";
 import { cardStyle, Dot, Label } from "./ui";
 
@@ -51,11 +52,11 @@ export const CapturePanel: React.FC = () => {
         width: CONTENT_W,
         height: h,
         opacity: appear * (1 - out),
-        transform: `translateY(${(mix(appear, 14, 0) - out * 24).toFixed(2)}px)`,
+        transform: `translateY(${(mix(appear, 14, 0) + stackOffset(frame) - out * 24).toFixed(2)}px)`,
       })}
     >
       <div style={{ display: "flex", alignItems: "center", height: HEAD_H, padding: "0 40px", borderBottom: `1px solid ${C.border}` }}>
-        <Label>Captured from the call</Label>
+        <Label>Captured from this call</Label>
         <div style={{ flex: 1 }} />
         <Dot color={C.accentBright} size={10} glow={8} />
         <div style={{ fontFamily: adConfig.type.ui, fontSize: 25, fontWeight: 500, color: C.textDim, marginLeft: 10 }}>Live</div>

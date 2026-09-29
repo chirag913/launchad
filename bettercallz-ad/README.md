@@ -1,18 +1,21 @@
-# BetterCallz — 16s Meta/Instagram Reel (real call recording)
+# BetterCallz — Meta/Instagram Reel built on a real call recording (26s)
 
 A Remotion (React + TypeScript) project that renders a 1080×1920, 30fps, H.264/AAC
 performance ad for BetterCallz. The finished render is at **`out/BetterCallzAd.mp4`**.
 
 ```
-ENQUIRY ARRIVES → BETTERCALLZ CALLS (real Sarvam recording) → WHAT THE BUYER SAYS IS CAPTURED
-→ SALES BRIEF → YOU PAID FOR THE LEAD. DON'T LET IT GO COLD. → GET A LIVE AI CALL →
+ENQUIRY ARRIVES → THE FIRST CALL STILL HASN'T → BETTERCALLZ CALLS AUTOMATICALLY
+→ the real conversation (Hindi transcript, fields captured as they're said)
+→ QUALIFIED brief: AI did the first call, your salesperson follows up
+→ YOU PAID FOR THE LEAD. DON'T LET IT GO COLD. → GET A LIVE AI CALL →
 ```
 
-The film is built **around the recording**. `public/audio/sarvam-call.wav` is the real call.
-`adConfig.call.turns` lists which spans of it are used, and every span plays untouched. The
-only edit is shorter silences between turns (about 0.26s of natural pause is kept). Every scene,
-headline, caption and captured field is timed from those turns, so a new recording and its turn
-list re-time the whole ad.
+The film is built **around the recording**. `public/audio/sarvam-call.wav` is the real call, and
+`adConfig.call.turns` lists the spans used. Every span plays untouched. The only edit is shortening
+the silences between sentences to about 0.3s. Every scene, transcript line and captured field is
+timed from those spans. The whole conversation runs about 14.7s, which is why the ad is 26s and not
+16s. Setting `INCLUDE_ENQUIRY_LINE = false` in `adConfig.ts` drops "आपने हाल ही में…" and makes the
+ad about 2s shorter.
 
 ## Commands
 
@@ -67,33 +70,31 @@ Everything a viewer reads or hears is in `src/config/adConfig.ts`, and all times
 - **Sound:** move or re-level `sound.cues`. Swapping a `.wav` in `public/sfx` keeps the timing.
 - Register a second `<Composition>` in `src/Root.tsx` if you want both variants side by side.
 
-## Final on-screen copy (16.0s)
+## Final timeline (26.0s)
 
 | Time | Headline | Product UI |
 |---|---|---|
-| 0.0–1.9 | A NEW PROPERTY / ENQUIRY JUST / CAME IN. | NEW PROPERTY ENQUIRY · Aarav Mehta · Just received → "BetterCallz is calling…" · call card rings in underneath |
-| 2.0–4.0 | BETTERCALLZ / CALLS THE LEAD. | Lead collapses to a row (Calling → **Engaged** when the buyer replies) · Real AI call · live meter · transcript |
-| 4.1–11.5 | AI QUALIFIES / THE BUYER. | Transcript follows each turn · CAPTURED FROM THE CALL: PURPOSE → **Investment**, BUDGET → **₹2 Crore** |
-| 11.6–13.3 | YOUR SALESPERSON / KNOWS WHAT THE / BUYER WANTS. | SALES BRIEF · Qualified · Aarav Mehta · Still looking · PURPOSE Investment · BUDGET ₹2 Crore · Handed to your sales team |
-| 13.5–16.0 | YOU PAID FOR / THE LEAD. / DON'T LET IT / GO COLD. | then, below it: bettercallz. · **GET A LIVE AI CALL →** · demo.bettercallz.com (on screen from 14.5s) |
+| 0.0–2.2 | A NEW PROPERTY / ENQUIRY JUST / CAME IN. | NEW PROPERTY ENQUIRY · via Meta lead form · Aarav Mehta · 3 BHK · ₹1.5–2 Cr · Just received |
+| 2.6–3.9 | THE FIRST CALL / STILL HASN'T. | Status: Not contacted yet · dashed FIRST CALL slot: "No one has spoken to this buyer yet" · Waiting 00:03 |
+| 4.3–6.9 | BETTERCALLZ / CALLS / AUTOMATICALLY. | "BetterCallz is calling…" → the slot becomes the ringing call → the enquiry collapses to a row and the call grows |
+| 4.9–19.6 | *(no headline: the conversation is the hero)* | Real AI call · live meter (AI teal, buyer white) · Hindi transcript line by line · Calling → **Engaged** on "हाँ जी" · CAPTURED FROM THIS CALL: PURPOSE **Investment** (on "Investment के लिए"), BUDGET **₹2 Cr** (on "2 करोड़") |
+| 19.9–22.2 | YOUR SALESPERSON / KNOWS WHAT THE / BUYER WANTS. (from 20.5s) | SALES BRIEF · ✓ QUALIFIED · Aarav Mehta · Still looking · PURPOSE Investment · BUDGET ₹2 Cr · FIRST CALL: Done by BetterCallz AI · FOLLOW-UP: Your salesperson → |
+| 22.6–26.0 | YOU PAID FOR / THE LEAD. / DON'T LET IT / GO COLD. | then below it, from 24.0s: **GET A LIVE AI CALL →** · demo.bettercallz.com (the small wordmark stays top-left) |
 
-## The conversation (used spans of the recording)
+## The conversation (spans of the recording, untouched)
 
-| Ad time | Source | Speaker | Transcript caption (English meaning) |
+| Ad time | Source | Speaker | Transcript |
 |---|---|---|---|
-| 0.85–3.33 | 5.14–7.62 | AI | "क्या आप अभी भी प्रॉपर्टी देख रहे हैं?": *Are you still looking at properties?* |
-| 3.41–4.10 | 8.26–8.95 | Buyer | *Yes.* |
-| 4.18–7.88 | 9.22–12.92 | AI | *Is it for living, or for investment?* |
-| 7.96–8.60 | 13.72–14.36 | Buyer | *Investment.* |
-| 8.68–10.54 | 14.50–16.36 | AI | *What's your approximate budget?* |
-| 10.62–11.36 | 16.56–17.30 | Buyer | *2 crore.* |
+| 4.90 | 0.70–2.72 | AI | नमस्ते, मैं BetterCallz से बोल रहा हूँ। |
+| 6.98 | 2.86–4.86 | AI | आपने हाल ही में प्रॉपर्टी के लिए पूछताछ की थी। |
+| 9.04 | 5.12–7.62 | AI | क्या आप अभी भी प्रॉपर्टी देख रहे हैं? |
+| 11.60 | 8.24–8.96 | Buyer | हाँ जी। |
+| 12.38 | 9.22–12.92 | AI | अच्छा, तो आप अपने रहने के लिए देख रहे हैं या investment के लिए? |
+| 16.14 | 13.70–14.38 | Buyer | Investment के लिए। |
+| 16.88 | 14.50–16.38 | AI | अच्छा, आपका budget roughly कितना है? |
+| 18.82 | 16.54–17.32 | Buyer | 2 करोड़। |
 
-Not used, to fit 16s: the greeting (0.8–4.8s, "Namaste, I'm calling from BetterCallz…" plus the
-enquiry reference) and the closing (18.6–24.7s: the AI saying it will share the details with the
-sales team, who will contact the buyer soon). To include either, add its span to `call.turns`.
-
-Captions are English meanings. They are not verbatim Hindi, because the transcription was done with a small
-offline model. Confirm the wording before publishing.
+Not used: the AI's closing line after "2 करोड़" (18.6–24.7s in the source).
 
 ## Text transition system
 

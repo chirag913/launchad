@@ -46,7 +46,8 @@ export const headlineSchedule: ScheduledHeadline[] = list.map((h, i) => {
     enterAt: "at" in l && l.at !== undefined ? slotAt(i) + f(l.at) : base + li * T.lineStagger,
   }));
   // Exit so the state is completely gone exactly when the next slot opens.
-  const exitAt = i < list.length - 1 ? slotAt(i + 1) - T.exit : undefined;
+  const until = "until" in h ? h.until : undefined;
+  const exitAt = until ? f(adConfig.scenes[until]) - T.exit : i < list.length - 1 ? slotAt(i + 1) - T.exit : undefined;
   return {
     key: `${h.scene}-${i}`,
     scene: h.scene,

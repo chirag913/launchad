@@ -5,20 +5,20 @@ import { END_CARD_AT, PAYOFF_BOTTOM } from "../config/headlineSchedule";
 import { CONTENT_W, GUTTER } from "../config/layout";
 import { DUR, EASE, mix, pop, ramp } from "../motion";
 import { ArrowRight } from "./Icons";
-import { Wordmark } from "./Wordmark";
 
 const C = adConfig.colors;
 
 /** Sits under the payoff (which stays on screen), clear of it by 90px. */
-export const CTA_Y = PAYOFF_BOTTOM + 90;
+export const CTA_Y = PAYOFF_BOTTOM + 110;
 
-/** End card: wordmark, one button, one URL — under the payoff, never over it. */
+/** End card: one button, one URL — under the payoff, never over it. The
+ *  brand stays present through the small wordmark top-left, so no second
+ *  logo competes with the CTA. */
 export const FinalCTA: React.FC = () => {
   const frame = useCurrentFrame();
   const at = END_CARD_AT;
   if (frame < at - 1) return null;
 
-  const mark = ramp(frame, at, DUR.hero, EASE.word);
   const btn = pop(frame, at + 5, { damping: 17, stiffness: 150 }, DUR.hero);
   const btnOpacity = ramp(frame, at + 5, 8);
   const url = ramp(frame, at + 9, DUR.panel);
@@ -29,14 +29,11 @@ export const FinalCTA: React.FC = () => {
 
   return (
     <div style={{ position: "absolute", left: GUTTER, top: CTA_Y, width: CONTENT_W }}>
-      <div style={{ opacity: mark, transform: `translateY(${mix(mark, 34, 0).toFixed(2)}px)` }}>
-        <Wordmark size={112} />
-      </div>
 
       <div
         style={{
           position: "relative",
-          marginTop: 48,
+          marginTop: 0,
           height: 144,
           borderRadius: 999,
           background: `linear-gradient(180deg, ${C.accentBright} 0%, #2CC39E 100%)`,

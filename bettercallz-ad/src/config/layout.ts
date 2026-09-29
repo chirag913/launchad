@@ -11,12 +11,22 @@ export const HEADLINE_Y = 282;
 export const HERO_Y = 600;
 
 /** Lead card: the full enquiry, then the compact row it collapses into. */
-export const LEAD_FULL_H = 404;
+export const LEAD_FULL_H = 480;
 export const LEAD_COMPACT_H = 136;
 
 export const STACK_GAP = 22;
+
+/** The "first call" slot under the full enquiry (scene 2), which becomes
+ *  the live call at the reveal. */
+export const SLOT_Y = HERO_Y + LEAD_FULL_H + STACK_GAP;
+export const SLOT_H = 230;
+
 /** The live call card, under the compact lead. */
 export const CALL_Y = HERO_Y + LEAD_COMPACT_H + STACK_GAP;
-export const CALL_H = 420;
+export const CALL_H = 504;
 /** What the call captures, under the call. */
 export const CAPTURE_Y = CALL_Y + CALL_H + STACK_GAP;
+
+/** Once the reveal headline has left, the product stack rises into the
+ *  space it occupied: the conversation becomes the hero of the frame. */
+export const STACK_RISE = 170;

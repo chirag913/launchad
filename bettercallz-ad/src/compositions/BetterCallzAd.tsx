@@ -30,14 +30,13 @@ export const BetterCallzAd: React.FC = () => {
     loadFonts().then(() => setReady(true));
   }, []);
 
-  const logoOut = ramp(frame, END_CARD_AT - 4, 8);
 
   return (
     <AbsoluteFill style={{ background: adConfig.colors.bg }}>
       <Background />
       {ready && (
         <>
-          <Wordmark size={46} style={{ position: "absolute", left: GUTTER, top: LOGO_Y, opacity: 1 - logoOut }} />
+          <Wordmark size={46} style={{ position: "absolute", left: GUTTER, top: LOGO_Y }} />
 
           {/* Exactly one headline state is ever mounted — the schedule
               guarantees the previous one is gone before the next enters. */}

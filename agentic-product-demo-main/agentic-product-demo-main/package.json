@@ -1,0 +1,27 @@
+{
+  "name": "agentic-product-demo",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Point your coding agent at your product and get a demo video back — built in React, not recorded off a screen",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio",
+    "adopt": "node scripts/adopt-theme.mjs",
+    "preview": "sh scripts/preview.sh demo",
+    "render": "sh scripts/render.sh demo",
+    "check": "node scripts/check-frames.mjs out/demo.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.399",
+    "@remotion/google-fonts": "^4.0.399",
+    "ffmpeg-static": "^5.3.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "remotion": "^4.0.399"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "typescript": "^5"
+  }
+}

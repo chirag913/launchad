@@ -5,6 +5,7 @@ import { CONTENT_W, GUTTER, QUAL_Y } from "../config/layout";
 import { DUR, EASE, mix, pop, ramp } from "../motion";
 import { Check } from "./Icons";
 import { sceneStart } from "./SceneTransition";
+import { swap } from "./TextTransition";
 import { cardStyle, Dot, Label } from "./ui";
 
 const C = adConfig.colors;
@@ -30,12 +31,14 @@ export const QualificationCard: React.FC = () => {
   if (frame < qualAt) return null;
 
   const rows = adConfig.qualification;
-  const appear = ramp(frame, qualAt + 4, DUR.sheet);
-  const out = ramp(frame, handoffAt, 10, EASE.out);
+  const appear = ramp(frame, qualAt + 1, DUR.panel);
+  const out = ramp(frame, handoffAt - 4, 7, EASE.out);
   if (out >= 1) return null;
 
   // The card grows as rows are asked, so there is never an empty box waiting.
-  const visibleRows = rows.reduce((n, _, i) => n + ramp(frame, fieldTimes(i).ask, DUR.panel, EASE.inOut), 0);
+  // The card grows to make room first; the row only enters once it fits,
+  // so no row is ever cut off by the card edge.
+  const visibleRows = rows.reduce((n, _, i) => n + ramp(frame, fieldTimes(i).ask - 8, 8, EASE.inOut), 0);
   const h = HEAD_H + 12 + visibleRows * ROW_H + 18;
 
   return (
@@ -62,7 +65,9 @@ export const QualificationCard: React.FC = () => {
         const { ask, answer } = fieldTimes(i);
         const rowT = ramp(frame, ask, DUR.panel);
         if (rowT <= 0) return null;
-        const ans = ramp(frame, answer, DUR.panel + 2, EASE.out);
+        // "Listening…" leaves completely, then the answer lands
+        const sw = swap(frame, answer - 7, 5, 2, DUR.panel);
+        const ans = sw.in;
         const tick = pop(frame, answer + 2, { damping: 15 }, DUR.sheet);
         const dots = ".".repeat(1 + (Math.floor((frame - ask) / 5) % 3));
         const highlight = "highlight" in r && r.highlight;
@@ -86,7 +91,7 @@ export const QualificationCard: React.FC = () => {
               {r.label}
             </Label>
             <div style={{ flex: 1 }} />
-            <div style={{ position: "relative", height: 60, minWidth: 320, display: "flex", alignItems: "center", justifyContent: "flex-end", overflow: "hidden" }}>
+            <div style={{ position: "relative", height: 60, minWidth: 320, display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
               {/* listening… */}
               <div
                 style={{
@@ -96,8 +101,8 @@ export const QualificationCard: React.FC = () => {
                   fontWeight: 500,
                   fontSize: 33,
                   color: C.accent,
-                  opacity: 1 - ans,
-                  transform: `translateY(${mix(ans, 0, -30).toFixed(2)}px)`,
+                  opacity: 1 - sw.out,
+                  transform: `translateY(${mix(sw.out, 0, -10).toFixed(2)}px)`,
                   whiteSpace: "nowrap",
                 }}
               >
@@ -106,7 +111,7 @@ export const QualificationCard: React.FC = () => {
               {/* the answer */}
               <div
                 style={{
-                  transform: `translateY(${mix(ans, 60, 0).toFixed(2)}px)`,
+                  transform: `translateY(${mix(ans, 14, 0).toFixed(2)}px)`,
                   opacity: ans,
                   display: "flex",
                   alignItems: "center",

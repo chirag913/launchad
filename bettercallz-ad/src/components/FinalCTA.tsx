@@ -1,26 +1,27 @@
 import React from "react";
 import { useCurrentFrame } from "remotion";
-import { adConfig, f } from "../config/adConfig";
+import { adConfig } from "../config/adConfig";
+import { END_CARD_AT } from "../config/headlineSchedule";
 import { CONTENT_W, GUTTER } from "../config/layout";
 import { DUR, EASE, mix, pop, ramp } from "../motion";
 import { ArrowRight } from "./Icons";
-import { sceneStart } from "./SceneTransition";
 import { Wordmark } from "./Wordmark";
 
 const C = adConfig.colors;
 
-export const CTA_Y = 780;
+/** Vertically centred in the Reels safe area (≈270–1250px). */
+export const CTA_Y = 560;
 
 /** End card: wordmark, one button, one URL. Nothing else. */
 export const FinalCTA: React.FC = () => {
   const frame = useCurrentFrame();
-  const at = sceneStart("close") + f(adConfig.cta.at);
+  const at = END_CARD_AT;
   if (frame < at - 1) return null;
 
   const mark = ramp(frame, at, DUR.hero, EASE.word);
-  const btn = pop(frame, at + 6, { damping: 17, stiffness: 150 }, DUR.hero);
-  const btnOpacity = ramp(frame, at + 6, 8);
-  const url = ramp(frame, at + 12, DUR.sheet);
+  const btn = pop(frame, at + 5, { damping: 17, stiffness: 150 }, DUR.hero);
+  const btnOpacity = ramp(frame, at + 5, 8);
+  const url = ramp(frame, at + 9, DUR.panel);
   // one slow sheen across the button, then it rests
   const sheen = ramp(frame, at + 16, 26, EASE.inOut);
   // soft breathing halo — the only thing moving once the card is set
@@ -28,16 +29,14 @@ export const FinalCTA: React.FC = () => {
 
   return (
     <div style={{ position: "absolute", left: GUTTER, top: CTA_Y, width: CONTENT_W }}>
-      <div style={{ overflow: "hidden", paddingBottom: 12 }}>
-        <div style={{ transform: `translateY(${mix(mark, 110, 0).toFixed(2)}%)` }}>
-          <Wordmark size={150} />
-        </div>
+      <div style={{ opacity: mark, transform: `translateY(${mix(mark, 34, 0).toFixed(2)}px)` }}>
+        <Wordmark size={150} />
       </div>
 
       <div
         style={{
           position: "relative",
-          marginTop: 56,
+          marginTop: 64,
           height: 144,
           borderRadius: 999,
           background: `linear-gradient(180deg, ${C.accentBright} 0%, #2CC39E 100%)`,

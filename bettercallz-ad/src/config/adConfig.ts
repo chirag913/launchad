@@ -14,34 +14,64 @@ export const HEIGHT = 1920;
 /** seconds → frames */
 export const f = (s: number) => Math.round(s * FPS);
 
-export type HeadlineLine = { text: string; accent?: boolean };
+export type HeadlineLine = {
+  text: string;
+  accent?: boolean;
+  /** seconds after the scene starts that this line enters. Omit and the
+   *  line enters with the state, staggered a few frames after the one above. */
+  at?: number;
+};
+
+export type Headline = {
+  /** Explicit font size (px). Every line must fit HEADLINE_W at this size —
+   *  the render throws if one does not. Break long sentences into lines
+   *  here; nothing ever wraps automatically. */
+  size: number;
+  lines: HeadlineLine[];
+  /** seconds after the scene starts that the headline exits. Omit and it
+   *  exits so that it is completely gone by the time the next scene starts. */
+  exitAt?: number;
+};
 
 export const adConfig = {
   id: "BetterCallzAd",
-  durationSec: 15,
+  durationSec: 15.5,
 
   /* ------------------------------------------------------------ scenes -- */
-  /** Scene start times (s). Each scene runs until the next one starts. */
+  /** Scene start times (s). Each scene runs until the next one starts.
+   *  The outgoing headline finishes leaving exactly as its scene ends; the
+   *  incoming one enters after a short breathing gap. */
   scenes: {
     arrive: 0,
-    waiting: 2.5,
-    calling: 4.5,
-    qualify: 7.5,
-    handoff: 10.5,
-    close: 12.5,
+    waiting: 2.1,
+    calling: 3.8,
+    qualify: 6.7,
+    handoff: 9.2,
+    close: 11.0,
   },
 
   /* --------------------------------------------------------- headlines -- */
-  /** Two-line headline per scene. `accent` lines render in brand teal.
-   *  A trailing "." on the last word gets the brand's teal full stop. */
+  /** `accent` lines render in brand teal. A trailing "." on a white line
+   *  gets the brand's teal full stop. */
   headlines: {
-    arrive: [{ text: "YOUR META LEAD" }, { text: "JUST CAME IN." }],
-    waiting: [{ text: "WHO'S" }, { text: "CALLING IT?", accent: true }],
-    calling: [{ text: "BETTERCALLZ" }, { text: "CALLS AUTOMATICALLY.", accent: true }],
-    qualify: [{ text: "AI QUALIFIES" }, { text: "THE BUYER." }],
-    handoff: [{ text: "YOUR SALES TEAM" }, { text: "GETS THE CONTEXT.", accent: true }],
-    close: [{ text: "YOU PAID FOR THE LEAD." }, { text: "DON'T LET IT GO COLD.", accent: true }],
-  } satisfies Record<string, HeadlineLine[]>,
+    arrive: { size: 112, lines: [{ text: "YOUR META LEAD" }, { text: "JUST CAME IN." }] },
+    waiting: { size: 112, lines: [{ text: "WHO'S" }, { text: "CALLING IT?", accent: true }] },
+    calling: { size: 80, lines: [{ text: "BETTERCALLZ" }, { text: "CALLS AUTOMATICALLY.", accent: true }] },
+    qualify: { size: 112, lines: [{ text: "AI QUALIFIES" }, { text: "THE BUYER." }] },
+    handoff: { size: 98, lines: [{ text: "YOUR SALES TEAM" }, { text: "GETS THE CONTEXT.", accent: true }] },
+    // The payoff owns the whole frame, so it is set larger, in four
+    // intentional lines, and lands in two beats.
+    close: {
+      size: 124,
+      lines: [
+        { text: "YOU PAID", at: 0.15 },
+        { text: "FOR THE LEAD.", at: 0.25 },
+        { text: "DON'T LET IT", accent: true, at: 1.15 },
+        { text: "GO COLD.", accent: true, at: 1.25 },
+      ],
+      exitAt: 2.2,
+    },
+  } satisfies Record<string, Headline>,
 
   /* -------------------------------------------------------------- lead -- */
   /** The enquiry the whole story follows. Illustrative buyer, not a customer. */
@@ -70,12 +100,12 @@ export const adConfig = {
     /** Voice file (in /public) and where it starts on the timeline. The
      *  speech inside the file begins ~0.62s in. */
     voiceSrc: "audio/property-voice.wav",
-    voiceAt: 4.72,
+    voiceAt: 4.02,
     /** Subtitles, timed against the TIMELINE (s). Hindi as spoken, with an
      *  English line under it for viewers who don't speak Hindi. */
     subtitles: [
-      { from: 5.3, to: 7.35, hi: "नमस्ते, मैं BetterCallz से बोल रहा हूँ।", en: "Hi, I'm calling from BetterCallz." },
-      { from: 7.75, to: 9.25, hi: "क्या अभी कोई प्रॉपर्टी देख रहे हैं?", en: "Are you looking at a property right now?" },
+      { from: 4.6, to: 6.6, hi: "नमस्ते, मैं BetterCallz से बोल रहा हूँ।", en: "Hi, I'm calling from BetterCallz." },
+      { from: 7.05, to: 8.55, hi: "क्या अभी कोई प्रॉपर्टी देख रहे हैं?", en: "Are you looking at a property right now?" },
     ],
   },
 
@@ -83,10 +113,10 @@ export const adConfig = {
   /** Resolved one after another, as if heard in the conversation. `at` is
    *  seconds after the qualify scene starts. */
   qualification: [
-    { label: "BUDGET", value: "₹2–2.5 Cr", at: 0.55 },
-    { label: "REQUIREMENT", value: "3 BHK", at: 1.05 },
-    { label: "TIMELINE", value: "1–2 months", at: 1.55 },
-    { label: "INTENT", value: "High", at: 2.05, highlight: true },
+    { label: "BUDGET", value: "₹2–2.5 Cr", at: 0.5 },
+    { label: "REQUIREMENT", value: "3 BHK", at: 0.92 },
+    { label: "TIMELINE", value: "1–2 months", at: 1.34 },
+    { label: "INTENT", value: "High", at: 1.76, highlight: true },
   ],
 
   /* ----------------------------------------------------------- handoff -- */
@@ -103,8 +133,8 @@ export const adConfig = {
   cta: {
     label: "GET A LIVE AI CALL",
     url: "demo.bettercallz.com",
-    /** seconds after the close scene starts */
-    at: 0.6,
+    /* Enters after the payoff headline has completely left — computed in
+     * config/headlineSchedule.ts, not set here. */
   },
 
   /* ------------------------------------------------------------- brand -- */
@@ -132,7 +162,7 @@ export const adConfig = {
     display: "'Inter Tight', sans-serif",
     ui: "'Inter Tight', sans-serif",
     hindi: "'Noto Sans Devanagari', 'Inter Tight', sans-serif",
-    headlineSize: 104,
+    headlineLineHeight: 1.0,
     headlineTracking: "-0.045em",
   },
 
@@ -144,15 +174,15 @@ export const adConfig = {
     /** bed ducks to this while the AI voice is speaking */
     bedDuck: 0.045,
     cues: [
-      { at: 0.18, src: "sfx/notify.wav", volume: 0.42 },
-      { at: 2.5, src: "sfx/air.wav", volume: 0.22 },
-      { at: 4.48, src: "sfx/ring.wav", volume: 0.16 },
-      { at: 5.08, src: "sfx/connect.wav", volume: 0.14 },
-      { at: 7.5, src: "sfx/air.wav", volume: 0.16 },
-      { at: 10.5, src: "sfx/air.wav", volume: 0.18 },
-      { at: 10.95, src: "sfx/confirm.wav", volume: 0.22 },
-      { at: 12.5, src: "sfx/air.wav", volume: 0.22 },
-      { at: 13.1, src: "sfx/notify.wav", volume: 0.3 },
+      { at: 0.05, src: "sfx/notify.wav", volume: 0.42 },
+      { at: 2.05, src: "sfx/air.wav", volume: 0.22 },
+      { at: 3.78, src: "sfx/ring.wav", volume: 0.16 },
+      { at: 4.38, src: "sfx/connect.wav", volume: 0.14 },
+      { at: 6.65, src: "sfx/air.wav", volume: 0.16 },
+      { at: 9.15, src: "sfx/air.wav", volume: 0.18 },
+      { at: 9.55, src: "sfx/confirm.wav", volume: 0.22 },
+      { at: 10.95, src: "sfx/air.wav", volume: 0.22 },
+      { at: 13.6, src: "sfx/notify.wav", volume: 0.3 },
     ],
     /** ticks for the uncalled clock in scene 2 */
     tickVolume: 0.1,

@@ -24,11 +24,12 @@ export const SalesBrief: React.FC = () => {
   const at = sceneStart("handoff");
   const closeAt = sceneStart("close");
   if (frame < at) return null;
-  const out = ramp(frame, closeAt, 10, EASE.out);
+  // gone before the payoff headline (which owns the full frame) enters
+  const out = ramp(frame, closeAt - 8, 8, EASE.out);
   if (out >= 1) return null;
 
-  const chainDraw = ramp(frame, at + 4, 22, EASE.inOut);
-  const cardIn = ramp(frame, at + 3, DUR.hero, EASE.out);
+  const chainDraw = ramp(frame, at + 6, 20, EASE.inOut);
+  const cardIn = ramp(frame, at + 5, DUR.hero, EASE.out);
 
   const facts = adConfig.qualification;
 
@@ -50,7 +51,7 @@ export const SalesBrief: React.FC = () => {
         />
         {H.steps.map((s, i) => {
           const pos = i / (H.steps.length - 1);
-          const lit = ramp(frame, at + 4 + Math.round(22 * pos) - 2, 8);
+          const lit = ramp(frame, at + 6 + Math.round(20 * pos) - 2, 8);
           const last = i === H.steps.length - 1;
           const x = 30 + (CONTENT_W - 60) * pos;
           return (
@@ -65,7 +66,7 @@ export const SalesBrief: React.FC = () => {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  transform: `scale(${mix(pop(frame, at + 4 + Math.round(22 * pos) - 2, { damping: 16 }, 12), 0.85, 1).toFixed(4)})`,
+                  transform: `scale(${mix(pop(frame, at + 6 + Math.round(20 * pos) - 2, { damping: 16 }, 12), 0.85, 1).toFixed(4)})`,
                 }}
               >
                 {last ? <Users size={26} color={lit > 0.5 ? C.accentInk : C.textMute} /> : <Check size={24} color={lit > 0.5 ? C.accentBright : C.textMute} />}
@@ -126,7 +127,7 @@ export const SalesBrief: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 22, marginTop: 30, ...enterAt(frame, at + 7, 0) }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 22, marginTop: 30, ...enterAt(frame, at + 9, 0) }}>
           <Avatar initials={L.initials} size={84} />
           <div>
             <div style={{ fontFamily: adConfig.type.ui, fontWeight: 600, fontSize: 46, letterSpacing: "-0.025em", color: C.text }}>{L.name}</div>
@@ -145,7 +146,7 @@ export const SalesBrief: React.FC = () => {
                 background: "rgba(255,255,255,0.03)",
                 border: `1px solid ${C.border}`,
                 padding: "20px 24px",
-                ...enterAt(frame, at + 9, i, { y: 14 }),
+                ...enterAt(frame, at + 11, i, { y: 14 }),
               }}
             >
               <Label size={21}>{q.label}</Label>
@@ -175,7 +176,7 @@ export const SalesBrief: React.FC = () => {
             borderRadius: 20,
             background: "rgba(63,216,177,0.08)",
             border: "1px solid rgba(63,216,177,0.22)",
-            ...enterAt(frame, at + 16, 0, { y: 14 }),
+            ...enterAt(frame, at + 18, 0, { y: 14 }),
           }}
         >
           <Users size={40} color={C.accentBright} />

@@ -14,7 +14,8 @@ npx remotion render "$ID" "out/$ID.mp4" \
 # faststart for instant playback in feeds; -c copy so the picture is untouched
 # Loudness: social feeds normalise to about -14 LUFS; master there with a
 # -1.5 dBTP ceiling so nothing clips after AAC. Picture is stream-copied.
-"$FFMPEG" -loglevel error -y -i "out/$ID.mp4" -c:v copy \
+DUR=$(grep -oE 'durationSec: [0-9.]+' src/config/adConfig.ts | grep -oE '[0-9.]+')
+"$FFMPEG" -loglevel error -y -i "out/$ID.mp4" -t "$DUR" -c:v copy \
   -af "loudnorm=I=-14:TP=-1.5:LRA=11" -ar 48000 -c:a aac -b:a 256k \
   -movflags +faststart "out/$ID.tmp.mp4" && mv "out/$ID.tmp.mp4" "out/$ID.mp4"
 "$FFMPEG" -hide_banner -i "out/$ID.mp4" 2>&1 | grep -E "Duration|Stream" || true

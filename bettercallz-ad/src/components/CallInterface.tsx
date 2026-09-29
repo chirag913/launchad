@@ -15,6 +15,7 @@ import {
 import { DUR, EASE, mix, mixToken, ramp } from "../motion";
 import { Clock, Phone } from "./Icons";
 import { sceneStart } from "./SceneTransition";
+import { swap } from "./TextTransition";
 import { Avatar, Dot, Label } from "./ui";
 import { Waveform } from "./Waveform";
 
@@ -51,7 +52,7 @@ export const CallInterface: React.FC = () => {
   const handoffAt = sceneStart("handoff");
 
   if (frame < waitAt) return null;
-  const out = ramp(frame, handoffAt, 10, EASE.out);
+  const out = ramp(frame, handoffAt - 4, 7, EASE.out);
   if (out >= 1) return null;
 
   const appear = ramp(frame, waitAt + 6, DUR.sheet);
@@ -63,12 +64,14 @@ export const CallInterface: React.FC = () => {
 
   // Border: dashed amber while waiting → solid teal once the call is live.
   const solid = ramp(frame, callAt + 2, 12);
-  const waitingOpacity = 1 - ramp(frame, callAt, 4);
-  const callOpacity = ramp(frame, callAt + 2, DUR.panel) * (1 - ramp(frame, qualAt, 6));
-  const barOpacity = ramp(frame, qualAt + 4, DUR.panel);
+  // each layer leaves completely before the next one arrives
+  const waitingOpacity = 1 - ramp(frame, callAt - 5, 4);
+  const callOpacity = ramp(frame, callAt + 1, DUR.panel) * (1 - ramp(frame, qualAt - 5, 4));
+  const barOpacity = ramp(frame, qualAt + 1, DUR.panel);
 
   const connected = frame >= CONNECT_AT;
   const connectT = ramp(frame, CONNECT_AT, 8);
+  const callState = swap(frame, CONNECT_AT - 5);
   const secs = Math.max(0, Math.floor((frame - CONNECT_AT) / fps));
 
   // Connector from lead card to slot — only while waiting.
@@ -206,7 +209,7 @@ export const CallInterface: React.FC = () => {
             <div>
               <div style={{ fontFamily: adConfig.type.ui, fontWeight: 600, fontSize: 48, letterSpacing: "-0.025em", color: C.text }}>{L.name}</div>
               <div style={{ position: "relative", height: 38, marginTop: 8 }}>
-                <div style={{ position: "absolute", fontFamily: adConfig.type.ui, fontWeight: 500, fontSize: 31, color: C.textDim, opacity: 1 - connectT, whiteSpace: "nowrap" }}>
+                <div style={{ position: "absolute", fontFamily: adConfig.type.ui, fontWeight: 500, fontSize: 31, color: C.textDim, opacity: 1 - callState.out, whiteSpace: "nowrap" }}>
                   {adConfig.call.calling}
                 </div>
                 <div
@@ -216,8 +219,8 @@ export const CallInterface: React.FC = () => {
                     fontWeight: 500,
                     fontSize: 31,
                     color: C.accentBright,
-                    opacity: connectT,
-                    transform: `translateY(${mix(connectT, 8, 0).toFixed(2)}px)`,
+                    opacity: callState.in,
+                    transform: `translateY(${mix(callState.in, 8, 0).toFixed(2)}px)`,
                     whiteSpace: "nowrap",
                   }}
                 >

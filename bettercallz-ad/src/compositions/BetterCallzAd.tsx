@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
-import { adConfig, f } from "../config/adConfig";
+import { adConfig } from "../config/adConfig";
+import { END_CARD_AT, headlineSchedule } from "../config/headlineSchedule";
 import { CONTENT_W, GUTTER, HEADLINE_Y, LOGO_Y } from "../config/layout";
 import { loadFonts } from "../fonts";
 import { ramp } from "../motion";
@@ -11,13 +12,9 @@ import { FinalCTA } from "../components/FinalCTA";
 import { LeadCard } from "../components/LeadCard";
 import { QualificationCard } from "../components/QualificationCard";
 import { SalesBrief } from "../components/SalesBrief";
-import { sceneEnd, scenes, sceneStart } from "../components/SceneTransition";
 import { SoundTrack } from "../components/SoundTrack";
 import { Subtitles } from "../components/Subtitles";
 import { Wordmark } from "../components/Wordmark";
-
-/** Frames the outgoing headline starts leaving before its scene ends. */
-const HEADLINE_OUT_LEAD = 8;
 
 /**
  * LEAD ARRIVES → NOBODY CALLS → BETTERCALLZ CALLS → AI QUALIFIES →
@@ -34,8 +31,7 @@ export const BetterCallzAd: React.FC = () => {
     loadFonts().then(() => setReady(true));
   }, []);
 
-  const closeAt = sceneStart("close");
-  const logoOut = ramp(frame, closeAt + f(adConfig.cta.at) - 6, 10);
+  const logoOut = ramp(frame, END_CARD_AT - 4, 8);
 
   return (
     <AbsoluteFill style={{ background: adConfig.colors.bg }}>
@@ -44,24 +40,15 @@ export const BetterCallzAd: React.FC = () => {
         <>
           <Wordmark size={46} style={{ position: "absolute", left: GUTTER, top: LOGO_Y, opacity: 1 - logoOut }} />
 
-          {scenes.map((k, i) => {
-            const start = sceneStart(k);
-            const end = sceneEnd(k);
-            const isFirst = i === 0;
-            const isLast = i === scenes.length - 1;
-            if (frame < start - 4 || frame > end + 2) return null;
-            return (
-              <div key={k} style={{ position: "absolute", left: GUTTER, top: HEADLINE_Y }}>
-                <AnimatedText
-                  lines={adConfig.headlines[k]}
-                  // the hook is already set on frame 0 — the thumbnail must read
-                  inAt={isFirst ? -30 : start}
-                  outAt={isLast ? undefined : end - HEADLINE_OUT_LEAD}
-                  width={CONTENT_W}
-                />
+          {/* Exactly one headline state is ever mounted — the schedule
+              guarantees the previous one is gone before the next enters. */}
+          {headlineSchedule
+            .filter((h) => frame >= h.enterAt && (h.goneAt === undefined || frame < h.goneAt))
+            .map((h) => (
+              <div key={h.key} style={{ position: "absolute", left: GUTTER, top: HEADLINE_Y, width: CONTENT_W }}>
+                <AnimatedText headline={h} width={CONTENT_W} />
               </div>
-            );
-          })}
+            ))}
 
           <LeadCard />
           <CallInterface />

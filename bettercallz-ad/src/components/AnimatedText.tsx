@@ -1,90 +1,73 @@
 import React, { useMemo } from "react";
 import { useCurrentFrame } from "remotion";
 import { measureText } from "@remotion/layout-utils";
-import { adConfig, HeadlineLine } from "../config/adConfig";
-import { DUR, EASE, mix, ramp } from "../motion";
+import { adConfig } from "../config/adConfig";
+import { ScheduledHeadline } from "../config/headlineSchedule";
+import { transitionStyle } from "./TextTransition";
 
 const T = adConfig.type;
 const C = adConfig.colors;
 
-const MAX_SIZE = T.headlineSize;
-const MIN_SIZE = 64;
+/** Negative tracking tightens spaces too; this restores a deliberate word gap. */
+const WORD_SPACING_EM = 0.12;
 
-/** Largest size at which every line fits `width`. */
-function fitSize(lines: readonly HeadlineLine[], width: number): number {
-  let size: number = MAX_SIZE;
-  for (const l of lines) {
+/** Throw if any line is wider than the container at its explicit size.
+ *  Headlines never wrap and are never auto-shrunk: a line that does not fit
+ *  is a copy decision (break it into another line in adConfig). */
+function assertFits(h: ScheduledHeadline, width: number) {
+  for (const l of h.lines) {
     const w = measureText({
       text: l.text,
       fontFamily: "Inter Tight",
       fontWeight: 800,
-      fontSize: 100,
+      fontSize: h.size,
       letterSpacing: T.headlineTracking,
-    }).width;
-    size = Math.min(size, Math.floor((width / w) * 100));
+    }).width + (l.text.split(" ").length - 1) * WORD_SPACING_EM * h.size;
+    if (w > width) {
+      throw new Error(`Headline line "${l.text}" is ${Math.ceil(w)}px wide at ${h.size}px; the container is ${width}px.`);
+    }
   }
-  return Math.max(MIN_SIZE, size);
 }
 
-type Props = {
-  lines: readonly HeadlineLine[];
-  /** frame the words start rising */
-  inAt: number;
-  /** frame the words start leaving (omit to hold) */
-  outAt?: number;
-  width: number;
-  /** extra frames between words */
-  stagger?: number;
-};
-
 /**
- * Headline whose words rise out of per-word masks and leave the same way,
- * upward. The mask (overflow: hidden on each word) is what makes it read as
- * type being set rather than a text box fading.
+ * One headline state. Fixed size, fixed line height, explicit width, one
+ * line per configured line — nothing wraps. Each line goes through its own
+ * enter window (TextTransition) and the state exits as one block.
  */
-export const AnimatedText: React.FC<Props> = ({ lines, inAt, outAt, width, stagger = 2 }) => {
+export const AnimatedText: React.FC<{ headline: ScheduledHeadline; width: number }> = ({ headline, width }) => {
   const frame = useCurrentFrame();
-  const size = useMemo(() => fitSize(lines, width), [lines, width]);
+  useMemo(() => assertFits(headline, width), [headline, width]);
+  const lineH = Math.round(headline.size * T.headlineLineHeight);
 
-  let wordIndex = 0;
   return (
-    <div style={{ width, fontFamily: T.display, fontWeight: 800, fontSize: size, letterSpacing: T.headlineTracking, lineHeight: 0.98 }}>
-      {lines.map((line, li) => {
-        const words = line.text.split(" ");
+    <div
+      style={{
+        width,
+        fontFamily: T.display,
+        fontWeight: 800,
+        fontSize: headline.size,
+        letterSpacing: T.headlineTracking,
+        wordSpacing: `${WORD_SPACING_EM}em`,
+        lineHeight: `${lineH}px`,
+      }}
+    >
+      {headline.lines.map((line, li) => {
+        const s = transitionStyle(frame, { enterAt: line.enterAt, exitAt: headline.exitAt });
+        const isLast = li === headline.lines.length - 1;
+        const trailingDot = !line.accent && line.text.endsWith(".") && (isLast || headline.lines[li + 1]?.accent);
+        const body = trailingDot ? line.text.slice(0, -1) : line.text;
         return (
-          <div key={li} style={{ display: "flex", flexWrap: "nowrap", whiteSpace: "nowrap" }}>
-            {words.map((w, wi) => {
-              const i = wordIndex++;
-              const tIn = ramp(frame, inAt + i * stagger, DUR.word, EASE.word);
-              const tOut = outAt === undefined ? 0 : ramp(frame, outAt, 7, EASE.inOut);
-              const y = mix(tIn, 108, 0) + mix(tOut, 0, -108);
-              const isLastWord = li === lines.length - 1 && wi === words.length - 1;
-              const trailingDot = !line.accent && isLastWord && w.endsWith(".");
-              const body = trailingDot ? w.slice(0, -1) : w;
-              return (
-                <span
-                  key={wi}
-                  style={{
-                    display: "inline-block",
-                    overflow: "hidden",
-                    paddingBottom: "0.06em",
-                    marginBottom: "-0.06em",
-                    marginRight: wi < words.length - 1 ? "0.24em" : 0,
-                  }}
-                >
-                  <span
-                    style={{
-                      display: "inline-block",
-                      transform: `translateY(${y.toFixed(2)}%)`,
-                      color: line.accent ? C.accentBright : C.text,
-                    }}
-                  >
-                    {body}
-                    {trailingDot ? <span style={{ color: C.accentBright }}>.</span> : null}
-                  </span>
-                </span>
-              );
-            })}
+          <div
+            key={li}
+            style={{
+              height: lineH,
+              whiteSpace: "pre",
+              color: line.accent ? C.accentBright : C.text,
+              ...(s ?? { opacity: 0 }),
+            }}
+          >
+            {body}
+            {trailingDot ? <span style={{ color: C.accentBright }}>.</span> : null}
           </div>
         );
       })}

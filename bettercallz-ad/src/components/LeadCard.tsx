@@ -5,6 +5,7 @@ import { CONTENT_W, GUTTER, HERO_Y, LEAD_COMPACT_H, LEAD_FULL_H } from "../confi
 import { DUR, EASE, mix, mixToken, pop, ramp } from "../motion";
 import { Inbox } from "./Icons";
 import { sceneStart } from "./SceneTransition";
+import { swap } from "./TextTransition";
 import { Avatar, cardStyle, Chip, Dot, Label } from "./ui";
 
 const C = adConfig.colors;
@@ -35,19 +36,21 @@ export const LeadCard: React.FC = () => {
   const h = mix(compact, LEAD_FULL_H, LEAD_COMPACT_H);
 
   // Handoff: the lead folds into the sales brief.
-  const out = ramp(frame, handoffAt, 10, EASE.out);
+  const out = ramp(frame, handoffAt - 4, 7, EASE.out);
   if (out >= 1) return null;
 
   // Waiting: accent cools from teal to amber.
   const cool = ramp(frame, waitAt + 4, 14, EASE.inOut);
+  const status = swap(frame, waitAt + 4);
   const statusColor = mixToken(cool, C.accentBright, C.warn);
   const pulse = cool < 1 ? 0.5 + 0.5 * Math.sin(frame / 4.2) : 0;
 
-  const fullOpacity = 1 - ramp(frame, callAt, 4, EASE.out);
-  const compactOpacity = ramp(frame, callAt + 2, 9, EASE.out);
+  // full content leaves completely before the compact row arrives
+  const fullOpacity = 1 - ramp(frame, callAt - 5, 4, EASE.out);
+  const compactOpacity = ramp(frame, callAt + 1, 9, EASE.out);
 
   // Compact status: "AI calling" during the call, "Qualifying" after.
-  const qualT = ramp(frame, qualAt, 8);
+  const qual = swap(frame, qualAt);
 
   return (
     <div
@@ -139,8 +142,8 @@ export const LeadCard: React.FC = () => {
           </div>
           {/* Status text crossfades: Just received → Not called yet */}
           <div style={{ position: "relative", flex: 1, height: 36 }}>
-            <StatusText text="Just received" color={C.text} opacity={1 - cool} y={-cool * 12} />
-            <StatusText text="Not called yet" color={C.warn} opacity={cool} y={(1 - cool) * 12} />
+            <StatusText text="Just received" color={C.text} opacity={1 - status.out} y={-status.out * 10} />
+            <StatusText text="Not called yet" color={C.warn} opacity={status.in} y={(1 - status.in) * 10} />
           </div>
           <div
             style={{
@@ -201,8 +204,8 @@ export const LeadCard: React.FC = () => {
         >
           <Dot color={C.accentBright} size={10} glow={8} />
           <div style={{ display: "grid" }}>
-            <span style={{ gridArea: "1 / 1", opacity: 1 - qualT }}>AI calling</span>
-            <span style={{ gridArea: "1 / 1", opacity: qualT }}>Qualifying</span>
+            <span style={{ gridArea: "1 / 1", opacity: 1 - qual.out }}>AI calling</span>
+            <span style={{ gridArea: "1 / 1", opacity: qual.in }}>Qualifying</span>
           </div>
         </div>
       </div>
